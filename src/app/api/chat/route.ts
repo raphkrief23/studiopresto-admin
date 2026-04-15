@@ -3,9 +3,18 @@ import { getSiteFiles } from "@/lib/github";
 import { buildSystemPrompt, callClaude } from "@/lib/claude";
 import { slugToName } from "@/lib/utils";
 
+interface ImagePayload {
+  base64: string;
+  mediaType: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { slug, messages, images } = await request.json();
+    const { slug, messages, images } = (await request.json()) as {
+      slug: string;
+      messages: { role: string; content: string }[];
+      images?: ImagePayload[];
+    };
 
     if (!slug || !messages?.length) {
       return new Response("Missing slug or messages", { status: 400 });
@@ -19,28 +28,36 @@ export async function POST(request: NextRequest) {
     // 2. Build system prompt with all file contents
     const systemPrompt = buildSystemPrompt(siteName, siteUrl, files);
 
-    // 3. Build the message list, adding images to the last user message if present
-    const apiMessages = messages.map(
-      (m: { role: string; content: string }, i: number) => {
-        if (
-          i === messages.length - 1 &&
-          m.role === "user" &&
-          images?.length > 0
-        ) {
-          return {
-            role: m.role,
-            content: [
-              ...images.map((url: string) => ({
-                type: "image",
-                source: { type: "url", url },
-              })),
-              { type: "text", text: m.content },
-            ],
-          };
-        }
-        return { role: m.role, content: m.content };
+    console.log(`[chat] slug=${slug}, messages=${messages.length}, images=${images?.length ?? 0}`);
+    if (images?.length) {
+      console.log(`[chat] Image sizes: ${images.map((i) => Math.round(i.base64.length / 1024) + "KB").join(", ")}`);
+    }
+
+    // 3. Build the message list, adding images as base64 to the last user message
+    const apiMessages = messages.map((m, i) => {
+      if (
+        i === messages.length - 1 &&
+        m.role === "user" &&
+        images &&
+        images.length > 0
+      ) {
+        return {
+          role: m.role,
+          content: [
+            ...images.map((img) => ({
+              type: "image" as const,
+              source: {
+                type: "base64" as const,
+                media_type: img.mediaType,
+                data: img.base64,
+              },
+            })),
+            { type: "text" as const, text: m.content },
+          ],
+        };
       }
-    );
+      return { role: m.role, content: m.content };
+    });
 
     // 4. Call Claude API with streaming
     const stream = await callClaude(systemPrompt, apiMessages);

@@ -2,18 +2,16 @@
 
 import type { ChatMessage as ChatMessageType } from "@/types";
 import { parseFileChanges, extractExplanation } from "@/lib/file-parser";
-import { FileCode, Check } from "lucide-react";
+import { FileCode, Check, Loader2 } from "lucide-react";
 
 interface ChatMessageProps {
   message: ChatMessageType;
-  onApply?: (files: { path: string; content: string }[]) => void;
   isApplying?: boolean;
   isApplied?: boolean;
 }
 
 export default function ChatMessage({
   message,
-  onApply,
   isApplying,
   isApplied,
 }: ChatMessageProps) {
@@ -49,39 +47,24 @@ export default function ChatMessage({
           {explanation}
         </div>
 
-        {/* File changes badge + apply button */}
+        {/* File changes status */}
         {fileChanges.length > 0 && (
           <div className="mt-3 pt-3 border-t border-white/10">
-            <div className="flex items-center gap-2 text-xs text-muted mb-2">
-              <FileCode className="w-3.5 h-3.5" />
-              <span>
-                {fileChanges.length} fichier{fileChanges.length > 1 ? "s" : ""}{" "}
-                modifie{fileChanges.length > 1 ? "s" : ""}
-              </span>
-            </div>
-            {/* List modified files */}
-            <div className="space-y-1 mb-3">
-              {fileChanges.map((fc, i) => (
-                <div key={i} className="text-xs text-muted font-mono bg-bg/30 px-2 py-1 rounded">
-                  {fc.path}
-                </div>
-              ))}
-            </div>
-            {isApplied ? (
+            {isApplying ? (
+              <div className="flex items-center gap-1.5 text-violet text-xs font-medium">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Deploiement en cours...
+              </div>
+            ) : isApplied ? (
               <div className="flex items-center gap-1.5 text-green text-xs font-medium">
                 <Check className="w-3.5 h-3.5" />
-                Modifications appliquees
+                {fileChanges.length} fichier{fileChanges.length > 1 ? "s" : ""} deploye{fileChanges.length > 1 ? "s" : ""}
               </div>
             ) : (
-              <button
-                onClick={() => onApply?.(fileChanges)}
-                disabled={isApplying}
-                className="px-3 py-1.5 bg-violet hover:bg-violet-hover disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors duration-200"
-              >
-                {isApplying
-                  ? "Application en cours..."
-                  : `Appliquer (${fileChanges.length} fichier${fileChanges.length > 1 ? "s" : ""})`}
-              </button>
+              <div className="flex items-center gap-1.5 text-muted text-xs">
+                <FileCode className="w-3.5 h-3.5" />
+                {fileChanges.length} fichier{fileChanges.length > 1 ? "s" : ""} modifie{fileChanges.length > 1 ? "s" : ""}
+              </div>
             )}
           </div>
         )}
