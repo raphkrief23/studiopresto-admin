@@ -20,7 +20,7 @@ export async function listRepos() {
   });
 
   return data
-    .filter((repo) => !EXCLUDED_REPOS.includes(repo.name))
+    .filter((repo) => !EXCLUDED_REPOS.includes(repo.name) && !repo.archived)
     .map((repo) => ({
       name: repo.name,
       slug: repo.name,
@@ -29,11 +29,12 @@ export async function listRepos() {
     }));
 }
 
-export async function deleteRepo(slug: string): Promise<void> {
+export async function archiveRepo(slug: string): Promise<void> {
   const octokit = getOctokit();
-  await octokit.rest.repos.delete({
+  await octokit.rest.repos.update({
     owner: GITHUB_USER,
     repo: slug,
+    archived: true,
   });
 }
 

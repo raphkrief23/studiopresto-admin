@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { deleteRepo, deleteVercelProject } from "@/lib/github";
+import { archiveRepo, deleteVercelProject } from "@/lib/github";
 
 export async function DELETE(
   request: NextRequest,
@@ -16,9 +16,9 @@ export async function DELETE(
       console.error(`[delete] Vercel delete failed:`, err);
     }
 
-    // 2. Delete GitHub repo
-    await deleteRepo(slug);
-    console.log(`[delete] GitHub repo ${slug} deleted`);
+    // 2. Archive GitHub repo (recoverable)
+    await archiveRepo(slug);
+    console.log(`[delete] GitHub repo ${slug} archived`);
 
     return NextResponse.json({ success: true });
   } catch (error) {
