@@ -6,6 +6,11 @@ function getOctokit() {
 
 const GITHUB_USER = process.env.GITHUB_USER || "raphkrief23";
 
+const EXCLUDED_REPOS = [
+  "studiopresto-admin",
+  "pipeline-restaurant",
+];
+
 export async function listRepos() {
   const octokit = getOctokit();
   const { data } = await octokit.rest.repos.listForUser({
@@ -14,28 +19,14 @@ export async function listRepos() {
     per_page: 100,
   });
 
-  // Filter: only repos that have restaurant_data.json (real restaurant sites)
-  const results = await Promise.all(
-    data.map(async (repo) => {
-      try {
-        await octokit.rest.repos.getContent({
-          owner: GITHUB_USER,
-          repo: repo.name,
-          path: "restaurant_data.json",
-        });
-        return {
-          name: repo.name,
-          slug: repo.name,
-          updatedAt: repo.pushed_at || repo.updated_at || "",
-          url: `https://${repo.name}.agencepresto.com`,
-        };
-      } catch {
-        return null;
-      }
-    })
-  );
-
-  return results.filter(Boolean);
+  return data
+    .filter((repo) => !EXCLUDED_REPOS.includes(repo.name))
+    .map((repo) => ({
+      name: repo.name,
+      slug: repo.name,
+      updatedAt: repo.pushed_at || repo.updated_at || "",
+      url: `https://${repo.name}.agencepresto.com`,
+    }));
 }
 
 export async function deleteRepo(slug: string): Promise<void> {
