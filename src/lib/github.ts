@@ -13,8 +13,7 @@ const EXCLUDED_REPOS = [
 
 export async function listRepos() {
   const octokit = getOctokit();
-  const { data } = await octokit.rest.repos.listForUser({
-    username: GITHUB_USER,
+  const { data } = await octokit.rest.repos.listForAuthenticatedUser({
     sort: "pushed",
     per_page: 100,
   });
