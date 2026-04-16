@@ -13,12 +13,49 @@ export async function listRepos() {
     sort: "pushed",
     per_page: 100,
   });
-  return data.map((repo) => ({
-    name: repo.name,
-    slug: repo.name,
-    updatedAt: repo.pushed_at || repo.updated_at || "",
-    url: `https://${repo.name}.agencepresto.com`,
-  }));
+
+  // Filter: only repos that have restaurant_data.json (real restaurant sites)
+  const results = await Promise.all(
+    data.map(async (repo) => {
+      try {
+        await octokit.rest.repos.getContent({
+          owner: GITHUB_USER,
+          repo: repo.name,
+          path: "restaurant_data.json",
+        });
+        return {
+          name: repo.name,
+          slug: repo.name,
+          updatedAt: repo.pushed_at || repo.updated_at || "",
+          url: `https://${repo.name}.agencepresto.com`,
+        };
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  return results.filter(Boolean);
+}
+
+export async function deleteRepo(slug: string): Promise<void> {
+  const octokit = getOctokit();
+  await octokit.rest.repos.delete({
+    owner: GITHUB_USER,
+    repo: slug,
+  });
+}
+
+export async function deleteVercelProject(slug: string): Promise<void> {
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const token = process.env.VERCEL_TOKEN;
+  await fetch(
+    `https://api.vercel.com/v9/projects/${slug}?teamId=${teamId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
 }
 
 export async function getRepoTree(slug: string): Promise<string[]> {
